@@ -1,0 +1,50 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+web_stage/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+bin/
+obj/
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+firebase-service-account.json
+
+# IDE and System files
+.DS_Store
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma Client output (if generated inside node_modules it is ignored by default, but good to keep clear)
+/backend/prisma/client/
+
+# Local asset storage
+/backend/data/
+/frontend/data/
+/data/

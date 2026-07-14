@@ -1,0 +1,92 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+// PROOF OF ALIBABA CLOUD INTEGRATION:
+// Database connector configured for Alibaba ApsaraDB RDS (MySQL)
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  projects  Project[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Project {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scripts     Script[]
+  storyboards Storyboard[]
+  videos      Video[]
+  characters  Character[]  // Added relation
+  episodes    Episode[]    // Added relation
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Script {
+  id        String   @id @default(cuid())
+  prompt    String   @db.Text
+  content   String   @db.LongText
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Storyboard {
+  id        String   @id @default(cuid())
+  prompt    String   @db.Text
+  taskIds   String   @db.Text // JSON string of task IDs or frame URLs
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Video {
+  id        String   @id @default(cuid())
+  prompt    String   @db.Text
+  taskId    String
+  videoUrl  String?  @db.Text
+  status    String   @default("PENDING") // PENDING, SUCCESS, FAILED
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Character {
+  id                String   @id @default(cuid())
+  name              String
+  description       String   @db.Text
+  referenceImageUrl String?  @db.Text
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([projectId, name])
+}
+
+model Episode {
+  id            String   @id @default(cuid())
+  title         String
+  status        String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  videoUrl      String?  @db.Text
+  cost          Float    @default(0.0)
+  tokensUsed    Int      @default(0)
+  scriptContent String?  @db.LongText
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+

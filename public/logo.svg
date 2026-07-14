@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32">
+  <defs>
+    <linearGradient id="forge-glow" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Styled Anvil + Play Button Merged Symbol -->
+  <!-- Anvil Base / Horn -->
+  <path d="M20 75 L80 75 L70 65 L60 65 L60 50 L75 50 C78 50 80 47 78 44 L70 30 L45 30 L30 30 C22 30 18 36 22 41 L27 50 L40 50 L40 65 L30 65 Z" fill="url(#forge-glow)" />
+  
+  <!-- Overlaid Cinematic Play Icon in negative space -->
+  <polygon points="46,38 62,47 46,56" fill="#ffffff" />
+  
+  <!-- Sparks/Flames rising representing the AI creation engine -->
+  <path d="M42 22 L46 12 L50 22 Z" fill="#a855f7" opacity="0.9" />
+  <path d="M56 24 L58 16 L62 24 Z" fill="#6366f1" opacity="0.9" />
+</svg>
