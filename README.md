@@ -6,6 +6,28 @@ From a single-line premise input, DramaForge orchestrates a **seven-agent pipeli
 
 ---
 
+## 🔗 Project Metadata & Live Deployment
+
+* **Live Web App Link:** [https://dramaforge.duckdns.org](https://dramaforge.duckdns.org)
+* **GitHub Repository:** [https://github.com/Dannyblaq15/drama-forge](https://github.com/Dannyblaq15/drama-forge)
+* **API Technologies:** Qwen Cloud, Alibaba Cloud Model Studio, Alibaba Cloud OSS, ApsaraDB RDS MySQL, Firebase Auth.
+* **Orchestration Stages:** 7 Stages (Hook -> Story -> Script -> Storyboard -> Video -> Audio -> Edit).
+
+---
+
+## ☁️ Proof of Alibaba Cloud Deployment
+
+DramaForge is successfully deployed on a **dedicated Alibaba Cloud ECS (Elastic Compute Service) Instance** in Singapore/Beijing regions running Ubuntu 22.04 LTS.
+
+### 🛡️ Production Infrastructure Layout:
+1. **Application Runtime:** The Next.js 15.5 app runs natively on Node.js v20 under **PM2** (Process Manager 2) on local port `3000`. PM2 handles auto-restarts, process crashes, and system reboot survival.
+2. **Reverse Proxy (Nginx):** Nginx is installed on port 80/443 as a reverse proxy, forwarding web traffic dynamically to `http://127.0.0.1:3000` while proxying websocket upgrades and headers.
+3. **SSL/TLS Encryption (Let's Encrypt):** A valid, secure SSL/TLS certificate was generated and installed via **Certbot** for `dramaforge.duckdns.org`. It automatically redirects all standard HTTP traffic to secure HTTPS.
+4. **Dynamic DNS (DuckDNS):** A background cron script runs on the ECS server every 5 minutes to verify and update the public IP address mapping on DuckDNS.
+5. **Database Persistence:** Real-time character visuals and script blueprints are persisted inside a secure **Alibaba ApsaraDB RDS MySQL Database Instance** located in Singapore.
+
+---
+
 ## 📐 System Architecture Diagram & Data Flow
 
 Below is the conceptual layout of the components and data flow:
