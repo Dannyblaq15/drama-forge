@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(req: Request, { params }: { params: { taskId: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ taskId: string }> }) {
   try {
     const { taskId } = await params; // Extract taskId from params (in Next.js 15, params is a promise)
     
