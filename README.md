@@ -1,8 +1,8 @@
-# 🎬 DramaForge — AI Showrunner
+# 🎬 DramaForge — AI Showrunner Studio
 
 DramaForge is an autonomous, vertical short-drama generation platform built for **Track 2: AI Showrunner** of the Global AI Hackathon Series with Qwen Cloud. 
 
-From a single-line premise input, DramaForge orchestrates a six-agent pipeline using **Qwen Cloud** and **Alibaba Cloud Model Studio** to write, cast, storyboard, generate, and edit a final high-fidelity vertical mobile short-drama video, running autonomously under a real-time token budget cap.
+From a single-line premise input, DramaForge orchestrates a **seven-agent pipeline** using **Qwen Cloud** and **Alibaba Cloud Model Studio** to write, cast, storyboard, generate, score audio, and edit a final high-fidelity vertical mobile short-drama video, running autonomously under a real-time token budget cap.
 
 ---
 
@@ -12,38 +12,43 @@ Below is the conceptual layout of the components and data flow:
 
 ```
 +-----------------------------------------------------------------------------------+
-|                                  Next.js FRONTEND                                 |
-|  - Premise Inputs & Budget Controls  - Stepper & Cost Meter  - Casting Cards Grid |
+|                            UNIFIED Next.js WEB APP                                |
+|  - UI: Premise Inputs, Budget Controls, Stepper & Live Cost Meter                 |
+|  - Backend: 7-Agent Orchestrator, Telemetry Logger, local FFmpeg video engine     |
 +-----------------------------------------------------------------------------------+
-                                         │  ▲ (REST & Socket.io)
+                                         │  ▲ (REST HTTP Polling)
                                          ▼  │
 +-----------------------------------------------------------------------------------+
-|                                  NestJS BACKEND                                   |
-|  - 6 Agent Modules   - Orchestrator Engine   - Telemetry Logger   - FFmpeg Engine  |
+|                              DATABASE & ALIBABA SERVICES                          |
+|  - Prisma DB: Character visual assets & Episode configurations                     |
+|  - Qwen Cloud / DashScope: Text LLM & Wan Image/Video generators                  |
+|  - OSS Storage: Stores generated portraits and mp4 video streams                  |
 +-----------------------------------------------------------------------------------+
          │                               │                                │
          ▼ (SQL / Prisma)                ▼ (REST APIs)                    ▼ (OSS SDK)
 +------------------+           +------------------+             +-------------------+
 |   ApsaraDB RDS   |           |    Qwen Cloud    |             | Alibaba Cloud OSS |
 | - MySQL Database |           | - DashScope MaaS |             | - Storage Bucket  |
+| - Character logs |           | - Qwen / Wan     |             | - Media cache     |
 +------------------+           +------------------+             +-------------------+
 ```
 
 ### Flow Sequence:
-1. **Frontend to Backend:** User inputs a premise and budget in the Next.js Frontend. Next.js triggers the NestJS Backend (`POST /api/episodes/generate`).
-2. **Backend Orchestration:** NestJS starts the six-agent sequence:
-   * **Stage 1 (Hook Strategist):** Queries `qwen-max` (via DashScope compatible mode) to formulate title, genre, and target runtime.
+1. **User Setup:** User inputs a premise and budget in the Web Dashboard. Next.js triggers the orchestrator API (`POST /api/episodes/generate`).
+2. **Orchestrator Sequence (7 Stages):**
+   * **Stage 1 (Hook Strategist):** Queries `qwen-max` to formulate commercial hook outlines, title, and genre.
    * **Stage 2 (Story Architect):** Queries `qwen-max` to draft scenes using a dual-line plot structure (main plot + hidden reversal).
    * **Stage 3 (Scriptwriter):** Spawns parallel queries to `qwen-plus` to write dialogues and actions per scene.
-   * **Stage 4 (Storyboard Director):** Spawns parallel queries to `qwen-max` to map camera angles and vertical positions.
-   * **Stage 5 (Casting & Video Engine):** Resolves character references in ApsaraDB RDS. On cache miss, generates a locked character portrait using `wan2.7-image`, uploads it to OSS, and caches it. Then, uses `wan2.1-i2v-720p` (or `wanx2.1-t2v-turbo`) reference-guided video generation to render consistent character clips.
-   * **Stage 6 (Post-Production):** Downscales clips to `720x1280` vertical, burns subtitles, stitches transitions, and concatenates clips using `ffmpeg` child processes.
-3. **Telemetric Loop:** Throughout the run, NestJS logs token counts and costs to the database and streams updates live to Next.js via Socket.io. If costs cross 80% of the budget, **Economy Mode** downgrades remaining Scriptwriter/Storyboard calls from `qwen-max` to `qwen-plus`.
-4. **Final Delivery:** The final video URL is persisted in the database and displayed in the frontend player alongside a downloadable script.
+   * **Stage 4 (Storyboard Director):** Spawns parallel queries to `qwen-max` to map camera angles, framing, and durations.
+   * **Stage 5 (Casting & Video Engine):** Resolves character profiles in ApsaraDB RDS. Generates character portraits using `wan2.7-image`, uploads them to OSS, and caches them. Then, uses reference-guided `wan2.1-i2v-720p` (or `wanx2.1-t2v-turbo`) to render consistent character clips.
+   * **Stage 6 (Audio & Music Scoring):** Downloads and caches cinematic stock backing tracks and merges sound scoring dynamically with duration-matching cuts.
+   * **Stage 7 (Post-Production):** Formats clips to `720x1280` vertical, overlays dialogue subtitles, and concatenates clips using `ffmpeg` child processes.
+3. **Telemetric Loop:** Throughout the run, the server writes logs and token costs to a persistent file (`tmp/pipeline-logs/`). The frontend polls `/api/episodes/[id]/progress` to render real-time progress. If costs cross 80% of the budget, **Economy Mode** automatically downgrades subsequent LLM calls from `qwen-max` to `qwen-plus`.
+4. **Final Delivery:** The compiled mp4 video with audio overlay is saved to OSS and loaded into the dashboard player.
 
 ---
 
-## ⚙️ Pipeline Agent Orchestration Flow (6 Stages)
+## ⚙️ Pipeline Agent Orchestration Flow (7 Stages)
 
 ```mermaid
 graph TD
@@ -52,8 +57,9 @@ graph TD
     Stage2 --> Stage3[Stage 3: Scriptwriter <br> Parallel qwen-plus]
     Stage3 --> Stage4[Stage 4: Storyboard Director <br> Parallel qwen-max]
     Stage4 --> Stage5[Stage 5: Casting & Video Engine <br> Wan Image & Video]
-    Stage5 --> Stage6[Stage 6: Post-Production <br> FFmpeg Stitching]
-    Stage6 --> FinalVideo[Vertical Episode Video + Screenplay]
+    Stage5 --> Stage6[Stage 6: Audio & Music <br> Sound Scoring Engine]
+    Stage6 --> Stage7[Stage 7: Post-Production <br> FFmpeg Stitching]
+    Stage7 --> FinalVideo[Vertical Episode Video + Audio + Screenplay]
 
     subgraph Budget Telemetry
         Stage1 -.-> CostCheck{Cost >= 80% Budget?}
@@ -138,7 +144,7 @@ graph TD
   ```
 
 ### Environment Variables
-Configure the `.env` file located in `frontend/.env` (re-used by both Next.js and NestJS):
+Configure the `.env` file located at the project root directory:
 ```env
 # Alibaba Cloud Model Studio API Credentials
 ALIBABA_API_KEY="your-dashscope-api-key"
@@ -156,30 +162,45 @@ ALIBABA_ACCESS_KEY_SECRET="your-access-key-secret"
 ```
 
 ### Running Locally
-1. **Frontend:**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev # Port 3000
-   ```
-2. **Backend:**
-   ```bash
-   cd backend
-   npm install
-   npm run start:dev # Port 3001
-   ```
+To launch the unified application:
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Build the database client
+npx prisma generate
+
+# 3. Start development server
+npm run dev # Access http://localhost:3000
+```
 
 ---
 
-## ☁️ Proof of Alibaba Cloud Deployment
+## ☁️ Alibaba Cloud ECS & PM2 Deployment
 
-The automation script [deploy-ecs.sh](deploy-ecs.sh) located at the workspace root is the official **Proof of Alibaba Cloud Deployment**.
-It performs a zero-downtime, production-ready PM2 deployment onto a dedicated Alibaba ECS instance in Singapore/Beijing regions:
-1. Logs into the remote ECS instance.
-2. Pulls latest changes from Git.
-3. Installs dependencies and runs Prisma Client generation for both NestJS and Next.js.
-4. Builds the production bundle of Next.js and compiles NestJS.
-5. Safely reloads the running PM2 processes: `dramaforge-frontend` and `dramaforge-backend`.
+We deploy the application natively on a **dedicated Alibaba ECS Ubuntu instance** in Singapore/Beijing regions:
+
+1. **Setup Node & FFmpeg on ECS:**
+   ```bash
+   sudo apt-get update
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt-get install -y nodejs ffmpeg
+   sudo npm install -g pm2
+   ```
+2. **Clone & Build:**
+   ```bash
+   git clone https://github.com/Dannyblaq15/drama-forge.git
+   cd drama-forge
+   npm install
+   npx prisma generate
+   npm run build
+   ```
+3. **Run on HTTP Port 80:**
+   ```bash
+   PORT=80 pm2 start npm --name "dramaforge" -- start
+   pm2 startup
+   pm2 save
+   ```
 
 ---
 
@@ -196,7 +217,7 @@ DramaForge can scale as a fully local or private developer suite:
 
 ### 3. Open Source Reusability
 The core orchestration mechanics of DramaForge are completely decoupled from this specific interface. Any team can reuse:
-* The typed six-agent workflow contracts (Hook -> Story -> Script -> Storyboard -> Video -> Edit).
+* The typed seven-agent workflow contracts (Hook -> Story -> Script -> Storyboard -> Video -> Audio -> Edit).
 * The character consistency database model mapping locked references to subsequent image-to-video API calls.
 * The real-time Economy Mode budget limiter that dynamically throttles models from `qwen-max` to `qwen-plus` under token count pressure.
 
